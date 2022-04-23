@@ -10,9 +10,11 @@ pub fn transmit(port: &mut Box<dyn SerialPort>, data: &[u8]) {
 
     // split data in 128 byte packets
     for block in data.chunks(128) {
-        let mut packet: Vec<u8> = Vec::new();
+        let mut packet: Vec<u8> = vec![0;128];
+        packet.fill(0);
         for j in 0..block.len() {
-            packet.push(block[j]);
+            packet.remove(j);
+            packet.insert(j, block[j]);
         }
         packets.push(packet);
     }

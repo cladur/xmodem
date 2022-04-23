@@ -33,10 +33,8 @@ pub fn crc(data: &[u8]) -> u16 {
 }
 
 pub fn file_to_u8(file: &str) -> Vec<u8> {
-    let content = fs::read_to_string(file).unwrap();
-    let mut vec: Vec<u8> = Vec::new();
-    vec = content.bytes().collect();
-    vec
+    let content = fs::read(file).unwrap();
+    content
 }
 
 pub fn u8_to_file(file: &str, data: &[u8]) {
