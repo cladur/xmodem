@@ -2,8 +2,24 @@ mod common;
 mod receiver;
 mod transmitter;
 
-use receiver::{receive, receive_crc, new_receive};
-use transmitter::{transmit, transmit_crc};
+use receiver::{new_receive};
+use transmitter::{transmit};
+
+use std::io;
+use std::io::prelude::*;
+
+
+fn pause() {
+    let mut stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
+    write!(stdout, "Press any key to continue...").unwrap();
+    stdout.flush().unwrap();
+
+    // Read a single byte and discard
+    let _ = stdin.read(&mut [0u8]).unwrap();
+}
 
 pub enum Receiver_Mode {
     Normal,
@@ -21,14 +37,15 @@ fn main() {
     println!("1. Transmit data");
     println!("2. Receive data");
     // Get input
-    //std::io::stdin().read_line(&mut input).unwrap();
-    let number = 2;//input.trim().parse::<u32>().unwrap();
+    std::io::stdin().read_line(&mut input).unwrap();
+    let number = input.trim().parse::<u32>().unwrap();
     match number {
         1 => {
             println!("Transmitting data...");
             println!("Opening port COM1...");
             let mut port = serialport::new("COM1", 115_200).open().unwrap();
-            let data = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam lectus odio, cursus ut elit et, vulputate consectetur nulla. Quisque erat nibh, gravida ac nunc eget, pellentesque tincidunt mauris. Morbi semper mattis facilisis. Pellentesque ac ipsum ut arcu mollis viverra in id erat. Vivamus cras amet.".as_bytes();
+            let data = "This Message is exactly 128 byteThis Message is exactly 128 byteThis Message is exactly 128 byteThis Message is exactly 128 byte".as_bytes();
+            //This Message is exactly 128 byteThis Message is exactly 128 byteThis Message is exactly 128 byteThis Message is exactly 128 byte
             transmit(&mut port, &data);
         }
         2 => {

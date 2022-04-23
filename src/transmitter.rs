@@ -1,107 +1,95 @@
-use crate::common::{crc, Symbol};
+use crate::{
+    common::{crc, Symbol},
+    receiver::alg_checksum,
+};
 use serialport::SerialPort;
 
 pub fn transmit(port: &mut Box<dyn SerialPort>, data: &[u8]) {
-    // Wait for NAK from receiver
-    loop {
-        let mut buf = [0u8; 1];
-        port.read(&mut buf).unwrap();
-        if buf[0] == Symbol::NAK as u8 {
-            println!("Received NAK...");
-            break;
+    let mut packets: Vec<Vec<u8>> = Vec::new();
+    let mut mode = Symbol::NAK as u8;
+
+    // split data in 128 byte packets
+    for block in data.chunks(128) {
+        let mut packet: Vec<u8> = Vec::new();
+        for j in 0..block.len() {
+            packet.push(block[j]);
         }
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        packets.push(packet);
     }
-    for (i, block) in data.chunks(128).enumerate() {
+
+    let mut connection = false;
+    for (i, packet) in packets.into_iter().enumerate() {
+        let mut char = ' ';
+        let mut char_byte = [0u8; 1];
+
+        println!("char {}, charbyte {}", char, char_byte[0]);
+
+        while (char != Symbol::NAK as u8 as char)
+            && (char != Symbol::C as u8 as char)
+            && !connection
+        {
+            if port.bytes_to_read().unwrap() != 0 {
+                port.read_exact(&mut char_byte).unwrap();
+                println!("Received: {}", char_byte[0] as char);
+            }
+            char = char_byte[0] as char;
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+
+        if !connection {
+            connection = true;
+            mode = char_byte[0];
+        }
+
+        let mut header = [0u8; 3];
+        header[0] = Symbol::SOH as u8;
+        header[1] = i as u8;
+        header[2] = 255 - i as u8;
+
         loop {
-            println!("Sending block {}", i);
-            let mut buf: Vec<u8> = Vec::with_capacity(132);
-            buf.push(Symbol::SOH as u8);
-            buf.push(i as u8);
-            buf.push(255 - i as u8);
-            buf.extend_from_slice(block);
-            if block.len() != 128 {
-                for _ in 0..(128 - block.len()) {
-                    buf.push(0);
+            port.write(&header).unwrap();
+            println!(
+                "Send SOH\nSend Packet no.: {}\nSend Packet complement: {}",
+                i,
+                255 - i
+            );
+            port.write(&packet).unwrap();
+
+            // choose the checksum algorithm
+            if mode == Symbol::NAK as u8 {
+                let checksum = alg_checksum(&packet);
+                port.write(&[checksum]).unwrap();
+            } else if mode == Symbol::C as u8 {
+                let crc_packet = crc(&packet);
+                let mut checksum = [0u8; 2];
+                checksum[0] = (crc_packet >> 8) as u8;
+                checksum[1] = (crc_packet) as u8;
+                port.write(&checksum).unwrap();
+            }
+
+            loop {
+                port.read_exact(&mut char_byte).unwrap();
+                println!("Received: {}", char_byte[0] as char);
+                if char_byte[0] != Symbol::ACK as u8 && char_byte[0] != Symbol::NAK as u8 {
+                    continue;
+                } else {
+                    break;
                 }
             }
-            let checksum = buf.iter().fold(0, |acc, &x| u8::wrapping_add(acc, x));
-            buf.push(checksum);
-            port.write(&buf);
-            // Receive ACK or NAK
-            let mut buf = [0u8; 1];
-            port.read(&mut buf).unwrap();
-            if buf[0] == Symbol::ACK as u8 {
-                println!("Received ACK...");
+
+            if char_byte[0] == Symbol::ACK as u8 {
                 break;
-            } else if buf[0] == Symbol::NAK as u8 {
-                println!("Received NAK...");
             }
         }
     }
+    let mut char_byte = [Symbol::EOT as u8];
+    port.write(&char_byte).unwrap();
 
-    // Send EOT
-    println!("Sending EOT...");
-    port.write(&[Symbol::EOT as u8]);
-    loop {
-        let mut buf = [0u8; 1];
-        port.read(&mut buf).unwrap();
-        if buf[0] == Symbol::ACK as u8 {
-            println!("Received ACK...");
-            break;
+    while (char_byte[0] != Symbol::ACK as u8) {
+        if port.bytes_to_read().unwrap() != 0 {
+            port.read_exact(&mut char_byte).unwrap();
+            println!("Received: {}", char_byte[0] as char);
         }
-    }
-}
-
-pub fn transmit_crc(port: &mut Box<dyn SerialPort>, data: &[u8]) {
-    // Wait for 'C' from receiver
-    loop {
-        let mut buf = [0u8; 1];
-        port.read(&mut buf).unwrap();
-        if buf[0] == Symbol::C as u8 {
-            println!("Received C...");
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_secs(1));
-    }
-
-    for (i, block) in data.chunks(128).enumerate() {
-        loop {
-            println!("Sending block {}", i);
-            let mut buf: Vec<u8> = Vec::with_capacity(133);
-            buf.push(Symbol::SOH as u8);
-            buf.push(i as u8);
-            buf.push(255 - i as u8);
-            buf.extend_from_slice(block);
-            if block.len() != 128 {
-                for _ in 0..(128 - block.len()) {
-                    buf.push(0);
-                }
-            }
-            let checksum = crc(&buf[3..]);
-            buf.extend(checksum.to_be_bytes());
-            port.write(&buf);
-            // Receive ACK or NAK
-            let mut buf = [0u8; 1];
-            port.read(&mut buf).unwrap();
-            if buf[0] == Symbol::ACK as u8 {
-                println!("Received ACK...");
-                break;
-            } else if buf[0] == Symbol::NAK as u8 {
-                println!("Received NAK...");
-            }
-        }
-    }
-
-    // Send EOT
-    println!("Sending EOT...");
-    port.write(&[Symbol::EOT as u8]);
-    loop {
-        let mut buf = [0u8; 1];
-        port.read(&mut buf).unwrap();
-        if buf[0] == Symbol::ACK as u8 {
-            println!("Received ACK...");
-            break;
-        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 }
