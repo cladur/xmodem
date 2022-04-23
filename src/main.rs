@@ -2,8 +2,13 @@ mod common;
 mod receiver;
 mod transmitter;
 
-use receiver::{receive, receive_crc};
+use receiver::{receive, receive_crc, new_receive};
 use transmitter::{transmit, transmit_crc};
+
+pub enum Receiver_Mode {
+    Normal,
+    CRC,
+}
 
 fn main() {
     /*
@@ -16,8 +21,8 @@ fn main() {
     println!("1. Transmit data");
     println!("2. Receive data");
     // Get input
-    std::io::stdin().read_line(&mut input).unwrap();
-    let number = input.trim().parse::<u32>().unwrap();
+    //std::io::stdin().read_line(&mut input).unwrap();
+    let number = 2;//input.trim().parse::<u32>().unwrap();
     match number {
         1 => {
             println!("Transmitting data...");
@@ -30,7 +35,7 @@ fn main() {
             println!("Receiving data...");
             println!("Opening port COM2...");
             let mut port = serialport::new("COM2", 115_200).open().unwrap();
-            let data = receive(&mut port);
+            let data = new_receive(&mut port, Receiver_Mode::CRC);
             println!(
                 "Received data: {:?}",
                 String::from_utf8_lossy(data.as_slice())
