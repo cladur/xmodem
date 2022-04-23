@@ -85,11 +85,12 @@ pub fn transmit(port: &mut Box<dyn SerialPort>, data: &[u8]) {
     let mut char_byte = [Symbol::EOT as u8];
     port.write(&char_byte).unwrap();
 
-    while (char_byte[0] != Symbol::ACK as u8) {
+    while char_byte[0] != Symbol::ACK as u8 {
         if port.bytes_to_read().unwrap() != 0 {
             port.read_exact(&mut char_byte).unwrap();
             println!("Received: {}", char_byte[0] as char);
         }
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
+    println!("TRANSMISSION FINISHED!")
 }

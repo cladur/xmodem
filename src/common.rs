@@ -1,3 +1,5 @@
+use std::{fs, io::Write};
+
 pub enum Symbol {
     /// Start of Header
     SOH = 0x01,
@@ -28,4 +30,16 @@ pub fn crc(data: &[u8]) -> u16 {
         }
     }
     crc
+}
+
+pub fn file_to_u8(file: &str) -> Vec<u8> {
+    let content = fs::read_to_string(file).unwrap();
+    let mut vec: Vec<u8> = Vec::new();
+    vec = content.bytes().collect();
+    vec
+}
+
+pub fn u8_to_file(file: &str, data: &[u8]) {
+    let mut file = fs::File::create(file).unwrap();
+    file.write_all(data);
 }

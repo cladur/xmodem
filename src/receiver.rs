@@ -1,4 +1,4 @@
-use crate::{common::{crc, Symbol}, Receiver_Mode};
+use crate::{common::{crc, Symbol}, ReceiverMode};
 use serialport::SerialPort;
 
 pub fn alg_checksum(bytes: &[u8]) -> u8 {
@@ -10,15 +10,15 @@ pub fn alg_checksum(bytes: &[u8]) -> u8 {
     checksum as u8
 }
 
-pub fn new_receive(port: &mut Box<dyn SerialPort>, mode: Receiver_Mode) -> Vec<u8> {
+pub fn new_receive(port: &mut Box<dyn SerialPort>, mode: ReceiverMode) -> Vec<u8> {
     let mut char_byte = [0u8; 1];
     let mut recieved_bytes = [0u8; 128];
     let mut all_recieved_bytes: Vec<u8> = Vec::new();
     match mode {
-        Receiver_Mode::Normal => {
+        ReceiverMode::Normal => {
             char_byte[0] = Symbol::NAK as u8;
         }
-        Receiver_Mode::CRC => {
+        ReceiverMode::CRC => {
             char_byte[0] = Symbol::C as u8;
         }
     }
@@ -53,7 +53,7 @@ pub fn new_receive(port: &mut Box<dyn SerialPort>, mode: Receiver_Mode) -> Vec<u
             port.read_exact(&mut recieved_bytes).unwrap();
 
             match mode {
-                Receiver_Mode::Normal => {
+                ReceiverMode::Normal => {
                     let mut checksum = [0u8; 1];
                     port.read_exact(&mut checksum).unwrap();
 
@@ -72,7 +72,7 @@ pub fn new_receive(port: &mut Box<dyn SerialPort>, mode: Receiver_Mode) -> Vec<u
                         port.write(&char_byte).unwrap();
                     }
                 }
-                Receiver_Mode::CRC => {
+                ReceiverMode::CRC => {
                     // read 2 bytes, checksum is 16 bits long
                     let mut checksum = [0u8; 2];
                     port.read_exact(&mut checksum).unwrap();

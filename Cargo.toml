@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 serialport = "4.1.0"
 itertools = "0.10.3"
+eframe = "0.17.0"
+rfd = "0.8.1"
