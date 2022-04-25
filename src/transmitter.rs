@@ -10,7 +10,7 @@ pub fn transmit(port: &mut Box<dyn SerialPort>, data: &[u8]) {
 
     // split data in 128 byte packets
     for block in data.chunks(128) {
-        let mut packet: Vec<u8> = vec![0;128];
+        let mut packet: Vec<u8> = vec![0; 128];
         packet.fill(0);
         for j in 0..block.len() {
             packet.remove(j);
@@ -23,8 +23,6 @@ pub fn transmit(port: &mut Box<dyn SerialPort>, data: &[u8]) {
     for (i, packet) in packets.into_iter().enumerate() {
         let mut char = ' ';
         let mut char_byte = [0u8; 1];
-
-        println!("char {}, charbyte {}", char, char_byte[0]);
 
         while (char != Symbol::NAK as u8 as char)
             && (char != Symbol::C as u8 as char)
