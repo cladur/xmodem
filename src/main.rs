@@ -9,22 +9,7 @@ use receiver::{new_receive};
 use transmitter::{transmit};
 use std::thread;
 
-use std::io;
-use std::io::prelude::*;
 use std::path::PathBuf;
-
-
-fn pause() {
-    let mut stdin = io::stdin();
-    let mut stdout = io::stdout();
-
-    // We want the cursor to stay at the end of the line, so we print without a newline and flush manually.
-    write!(stdout, "Press any key to continue...").unwrap();
-    stdout.flush().unwrap();
-
-    // Read a single byte and discard
-    let _ = stdin.read(&mut [0u8]).unwrap();
-}
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum ReceiverMode {
@@ -45,7 +30,6 @@ struct AppState {
     output_file: Option<PathBuf>,
     in_port: String,
     out_port: String,
-    data: Vec<u8>,
     receiver_mode: ReceiverMode,
 }
 
@@ -57,7 +41,6 @@ impl AppState {
             output_file: None,
             in_port: String::from("COM1"),
             out_port: String::from("COM2"),
-            data: Vec::new(),
             receiver_mode: ReceiverMode::Normal,
         }
     }
