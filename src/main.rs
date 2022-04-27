@@ -2,12 +2,12 @@ mod common;
 mod receiver;
 mod transmitter;
 
-use eframe::egui::{CentralPanel, Layout, self};
+use eframe::egui::{self, CentralPanel, Layout};
 use eframe::epi::App;
 use eframe::run_native;
-use receiver::{new_receive};
-use transmitter::{transmit};
+use receiver::receive;
 use std::thread;
+use transmitter::transmit;
 
 use std::path::PathBuf;
 
@@ -66,7 +66,6 @@ impl App for AppState {
                         }
                     }
                     Mode::Transmitter => {
-
                         // ### ################ ###
                         // ### TRANSMITTER MODE ###
                         // ### ################ ###
@@ -112,7 +111,6 @@ impl App for AppState {
                         }
                     }
                     Mode::Receiver => {
-
                         // ### ############# ###
                         // ### RECEIVER MODE ###
                         // ### ############# ###
@@ -126,7 +124,7 @@ impl App for AppState {
 
                         // FILE PICKER
                         if ui.button("Pick File").clicked() {
-                            self.output_file = rfd::FileDialog::new().pick_file();
+                            self.output_file = rfd::FileDialog::new().save_file();
                         }
                         if let Some(selected_file) = &self.output_file {
                             ui.label(selected_file.to_string_lossy().to_string());
@@ -144,8 +142,8 @@ impl App for AppState {
                         ui.radio_value(&mut self.receiver_mode, ReceiverMode::CRC, "CRC");
 
                         if ui.button("Receive").clicked() {
-                            let mut port = serialport::new("COM2", 115_200).open().unwrap();
-                            let data = new_receive(&mut port, self.receiver_mode);
+                            let mut port = serialport::new(&self.in_port, 115_200).open().unwrap();
+                            let data = receive(&mut port, self.receiver_mode);
                             if let Some(path) = &self.output_file {
                                 common::u8_to_file(path.to_str().unwrap(), &data);
                             }
@@ -157,7 +155,6 @@ impl App for AppState {
                         }
                     }
                 }
-
             });
         });
     }
